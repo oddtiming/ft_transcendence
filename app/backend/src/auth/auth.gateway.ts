@@ -21,11 +21,14 @@ export class AuthGateway {
     );
     logger.log(`${payload.password}`);
 
-    return this.authService.signup(client, dto);
+    const ret = this.authService.signup(client, dto);
+    client.handshake.auth = ret;
   }
 
-  @SubscribeMessage("login")
+  @SubscribeMessage("auth/login")
   async login(client: any, payload: string) {
+    console.log(client);
+    console.log(client.handshake.auth);
     return {
       client,
       payload
