@@ -2,11 +2,13 @@ import {
   WebSocketGateway,
   SubscribeMessage,
   MessageBody,
-  BaseWsExceptionFilter
+  BaseWsExceptionFilter,
+  WebSocketServer
 } from "@nestjs/websockets";
 import { LoginService } from "./login.service";
 import { LoginDto } from "./dto/login.dto";
 import { UseFilters } from "@nestjs/common";
+import { Server } from "socket.io";
 import { PrismaClientExceptionFilterWs } from "../prisma-client-exception.filter";
 
 export enum LoginEnum {
@@ -20,7 +22,18 @@ export enum LoginEnum {
 @UseFilters(new PrismaClientExceptionFilterWs())
 @WebSocketGateway()
 export class LoginGateway {
+  @WebSocketServer() // Gives us the instance of the WebSocket server
+  server: Server;
+
   constructor(private readonly loginService: LoginService) {}
+
+  // OnModuleInit implementation
+  onModuleInit() {
+    this.server.on("connection", (socket) => {
+      console.log("MyGateway: 'connection' event triggered:");
+      console.log("socket.id: ", socket.id);
+    });
+  }
 
   /**
    * @param

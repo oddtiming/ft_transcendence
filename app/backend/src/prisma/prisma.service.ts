@@ -1,4 +1,10 @@
-import { Injectable, Logger } from "@nestjs/common";
+import * as argon from "argon2";
+import {
+  INestApplication,
+  Injectable,
+  Logger,
+  OnModuleInit
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaClient } from "@prisma/client";
 import {
@@ -9,9 +15,20 @@ import {
   UserDto
 } from "../auth/dto/prisma.dto";
 import config from "../config";
+import { WsException } from "@nestjs/websockets";
 
 @Injectable()
-export class PrismaService extends PrismaClient {
+export class PrismaService extends PrismaClient implements OnModuleInit {
+  async onModuleInit() {
+    await this.$connect();
+  }
+
+  async enableShutdownHooks(app: INestApplication) {
+    this.$on("beforeExit", async () => {
+      await app.close();
+    });
+  }
+
   constructor(configService: ConfigService) {
     // Will call the constructor of the extended class
     super({
@@ -43,12 +60,30 @@ export class PrismaService extends PrismaClient {
       this.player.deleteMany()
     ]);
   }
-  addUser(dto: UserDto) {
-    return dto;
+  async addUser(dto: any) {
+    try {
+      const hash = await argon.hash(dto.password);
+      Logger.log("dto.email: " + dto.email);
+      Logger.log("dto.hash: " + dto.password);
+      const user = await this.user.create({
+        data: {
+          email: dto.email,
+          hash
+        }
+      });
+      Logger.log("Successfully created user " + user.email + ".");
+      return user;
+    } catch (error) {
+      Logger.log("error code: " + error.code);
+      Logger.error(error);
+      throw new WsException(error.code);
+    }
   }
+
   editUser(dto: UserDto) {
     return dto;
   }
+
   deleteUser(dto: UserDto) {
     return dto;
   }

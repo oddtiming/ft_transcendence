@@ -31,7 +31,7 @@ export class AuthController {
       dto
     }); // Creates an object and assigns it
 
-    return this.authService.signup(dto);
+    // return this.authService.signup(dto);
   }
 
   @Get("signup")

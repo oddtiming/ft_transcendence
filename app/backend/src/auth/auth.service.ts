@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
+import { ForbiddenException, Inject, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuthDto } from "./dto";
 import * as argon from "argon2";
@@ -6,16 +6,21 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { WsException } from "@nestjs/websockets";
+import { IORedisKey } from "../redis/redis.module";
+import { Redis } from "ioredis";
+import { Socket } from "socket.io";
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService, // create(), findUnique()
     private jwt: JwtService, // signAsync()
-    private config: ConfigService // JWT_SECRET
+    private config: ConfigService, // JWT_SECRET
+    @Inject(IORedisKey) private readonly redisClient: Redis
   ) {}
 
   async signup(
+    client: Socket,
     dto: AuthDto
   ): Promise<
     { access_token: string } | { errorCode: number; errorMessage: string }
@@ -23,6 +28,9 @@ export class AuthService {
     try {
       // Generate the password hash
       const hash = await argon.hash(dto.password);
+
+      Logger.log(dto.email);
+      Logger.log(hash);
 
       // Save the new user in the db
       const user = await this.prisma.user.create({
@@ -32,9 +40,13 @@ export class AuthService {
         }
       });
 
+      // Save the user id in the cache
+      this.redisClient.set(client.id, user.id);
+
       // Return the saved user
       return this.signToken(user.id, user.email);
     } catch (error) {
+      Logger.error(error);
       // Check if the error comes from Prisma
       if (error instanceof PrismaClientKnownRequestError) {
         // Prisma error code for duplicate fields
@@ -47,13 +59,6 @@ export class AuthService {
       // throw error;
       return { errorCode: 1, errorMessage: "Error" };
     }
-  }
-
-  async callToSignup(dto: AuthDto) {
-    const ret = await this.signup(dto);
-    if (ret) throw new WsException(" invalid credentials");
-
-    return dto;
   }
 
   async signin(dto: AuthDto) {

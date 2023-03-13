@@ -22,24 +22,24 @@ export class LoginService {
     const body = JSON.parse(message);
     const dto = this.transformToDto(body);
     console.log(dto);
-
-    try {
-      const hash = await argon.hash(dto.password);
-      Logger.log("dto.email: " + dto.email);
-      Logger.log("dto.hash: " + dto.password);
-      const user = await this.prismaService.user.create({
-        data: {
-          email: dto.email,
-          hash
-        }
-      });
-      Logger.log("Successfully created user " + user.email + ".");
-      return user;
-    } catch (error: WsException | any) {
-      Logger.log("error code: " + error.code);
-      Logger.error(error);
-      throw new WsException(error.code);
-    }
+    return this.prismaService.addUser(dto);
+    // try {
+    //   const hash = await argon.hash(dto.password);
+    //   Logger.log("dto.email: " + dto.email);
+    //   Logger.log("dto.hash: " + dto.password);
+    //   const user = await this.prismaService.user.create({
+    //     data: {
+    //       email: dto.email,
+    //       hash
+    //     }
+    //   });
+    //   Logger.log("Successfully created user " + user.email + ".");
+    //   return user;
+    // } catch (error: WsException | any) {
+    //   Logger.log("error code: " + error.code);
+    //   Logger.error(error);
+    //   throw new WsException(error.code);
+    // }
   }
 
   /**

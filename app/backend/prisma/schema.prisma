@@ -166,6 +166,8 @@ model Match {
   startedAt DateTime  @default(now())
   endedAt   DateTime?
   Player    Player[]
+
+  @@map("matches")
 }
 
 enum MatchStatus {
@@ -184,6 +186,8 @@ model Player {
 
   score      Int
   sidePlayed PlayerSide
+
+  @@map("players")
 }
 
 enum PlayerSide {
