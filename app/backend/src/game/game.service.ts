@@ -11,15 +11,11 @@ import { v4 as uuidv4 } from "uuid";
 
 const logger = new Logger("gameService");
 
-export class PlayerQueue {
-  client_id: string;
-  join_time: number;
-  client_mmr: number;
-  socket_id: string; //Temporary
-}
-
 /**
  * GameService class
+ * @property {SchedulerRegistry} schedulerRegistry
+ * @property {GameLogic} gameLogic
+ * @property {GameModuleData} gameModuleData
  */
 @WebSocketGateway({
   cors: {
@@ -34,7 +30,7 @@ export class GameService {
     private gameModuleData: GameModuleData
   ) {}
 
-  //Get local instance of websocker server
+  /** Get local instance of websocker server */
   @WebSocketServer()
   public server: Server;
   private gameState: GameTypes.GameData;
@@ -43,42 +39,35 @@ export class GameService {
    * Creates a new game lobby with sender and invitee as players
    * @method sendGameInvite
    * @returns {}
-   * @async
    *
    * @todo add timeout for response
    * @todo pass both players data to createLobby
    */
   async sendGameInvite() {
     logger.log("joinGameInvite() called");
-
-    //If the invited client responds then create lobby
   }
 
   /**
    * Adds player to the game queue and tries to find a match
    * @method joinGameQueue
+   * @param {string} socket - client.id of client socket
    * @param {GameDto.JoinGameQueueDto} player
    * @returns {}
-   * @async
    */
-  async joinGameQueue(client: Socket, player: GameDto.JoinGameQueueDto) {
+  async joinGameQueue(socket: string, player: GameDto.JoinGameQueueDto) {
     logger.log("joinGameQueue() called");
 
-    //Create a player queue object
-
-    //Populate data for player
-    const newPlayer: GameTypes.PlayerQueue = {
-      // newPlayer.client_id = player.client_id; //TODO: Database integration
-      client_id: uuidv4(), //TODO: Temporary
-      join_time: player.join_time,
-      client_mmr: 500,
-      socket_id: client.id
+    //Create new player object
+    const newPlayer: GameTypes.Participant = {
+      client_id: uuidv4(),
+      socket_id: socket,
+      user_name: "test",
+      is_player: true
     };
     //Add player to queue
     this.gameModuleData.addQueue(newPlayer);
-
     //Attempt to retrieve a pair of players
-    const playerPair: GameTypes.PlayerQueue[] =
+    const playerPair: GameTypes.Participant[] =
       this.gameModuleData.getPairQueue();
     //If successful call createLobby()
     if (playerPair) {
@@ -89,40 +78,34 @@ export class GameService {
   /**
    * Emit event to tell client that lobby has been successfully created
    * @method createLobby
-   * @param {GameTypes.PlayerQueue[]} playerPair
+   * @param {GameTypes.Participant[]} playerPair
    * @returns {}
-   * @async
    */
-  async createLobby(playerPair: GameTypes.PlayerQueue[]) {
+  async createLobby(playerPair: GameTypes.Participant[]) {
     logger.log("createLobby() called");
 
     //Create a new lobby
-    const newLobby = new GameTypes.gameLobby();
-    newLobby.players = [];
-    //Populate lobby data
-    newLobby.players.push(playerPair[0].client_id);
-    newLobby.players.push(playerPair[1].client_id);
-    newLobby.created_at = Date.now();
-    newLobby.lobby_id = uuidv4();
+    const lobby = new GameTypes.GameLobby();
+    lobby.participants.push(playerPair.pop());
+    lobby.participants.push(playerPair.pop());
+    lobby.created_at = Date.now();
+    lobby.lobby_id = uuidv4();
 
     //Create a new websocket room and subscribe players
-    this.server.in(playerPair[0].socket_id).socketsJoin(newLobby.lobby_id);
-    this.server.in(playerPair[1].socket_id).socketsJoin(newLobby.lobby_id);
+    this.server.in(playerPair[0].socket_id).socketsJoin(lobby.lobby_id);
+    this.server.in(playerPair[1].socket_id).socketsJoin(lobby.lobby_id);
 
-    //Add lobby to map of lobbies
-    //TODO: Swap this to a setter function in the data module
-    GameModuleData.lobbies.push(newLobby);
+    //Add new lobby to array
+    this.gameModuleData.addLobby(lobby);
 
     //Emit lobbyCreated event to room members
-
-    this.server.to(newLobby.lobby_id).emit("lobbyCreated");
+    this.server.to(lobby.lobby_id).emit("lobbyCreated");
   }
 
   /**
    * Start the game if both players are ready
    * @method gameStart
    * @returns {}
-   * @async
    */
   async gameStart() {
     logger.log("gameStart() called");
@@ -134,10 +117,21 @@ export class GameService {
   }
 
   /**
+   * When all participants leave the lobby, lobby will be deleted
+   * @method deleteLobby
+   * @param {GameTypes.GameLobby} lobby
+   * @returns {}
+   */
+  async deleteLobby(lobby: GameTypes.GameLobby) {
+   lobby.participants.forEach( (value: GameTypes.Participant) => {
+    this.server.in(value.socket_id).socketsLeave(lobby.lobby_id);
+   })
+  }
+
+  /**
    * Creates a new game instance
    * @method startNewGame
    * @returns {}
-   * @async
    */
   async startNewGame() {
     logger.log("startNewGame() called");

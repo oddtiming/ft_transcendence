@@ -1,7 +1,8 @@
-export class Vec2 {
-  x: number;
-  y: number;
-}
+
+
+import { Vec2 } from "./vector";
+
+export type Vec = number[];
 
 export class BallData {
   pos: Vec2 = new Vec2();
@@ -19,6 +20,7 @@ export class GameBounds {
 }
 
 export class GameData {
+  match_id: string;
   last_update_time: number;
   is_new_round: boolean;
   last_serve_side: string;
@@ -30,21 +32,28 @@ export class GameData {
   player_right_ready: boolean;
 }
 
-export class PlayerQueue {
-  client_id: string;
-  join_time: number;
-  client_mmr: number;
-  socket_id: string; //Temporary
-}
-
 /**
  * Players and spectators are both arrays of clientIDs
  */
-export class gameLobby {
-  players: string[];
-  spectators: string[];
+export class GameLobby {
+  participants: Participant[] = [];
+  players: string[] = [];
+  spectators: string[] = [];
   lobby_id: string;
   match_id: string;
   gamestate: GameData;
   created_at: number;
+}
+
+/**
+ *
+ */
+export class Participant {
+  client_id: string;
+  socket_id: string;  /** This socket_id needs to be kept up to date */
+  user_name: string;
+  is_player: boolean;
+  mmr?: number;
+  diplay_name?: string; /** @todo add in display name at a later time*/
+  queue_join_time?: number;
 }

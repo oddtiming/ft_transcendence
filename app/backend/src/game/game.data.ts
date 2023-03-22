@@ -8,27 +8,27 @@ const logger = new Logger("gameData");
  * Storage class for handling runtime volatile service data
  */
 export class GameModuleData {
-  public static queue: GameTypes.PlayerQueue[] = [];
+  public static queue: GameTypes.Participant[] = [];
   public static games: GameTypes.GameData[] = [];
-  public static lobbies: GameTypes.gameLobby[] = [];
+  public static lobbies: GameTypes.GameLobby[] = [];
 
   /**
    * Adds player to game queue
    * @method addQueue
-   * @param {GameTypes.PlayerQueue} player
+   * @param {GameTypes.Participant} player
    * @returns {}
    */
-  addQueue(player: GameTypes.PlayerQueue) {
+  addQueue(player: GameTypes.Participant) {
     GameModuleData.queue.push(player);
   }
 
   /**
    * Removes player from game queue
    * @method removeQueue
-   * @param {GameTypes.PlayerQueue} player
+   * @param {GameTypes.Participant} player
    * @returns {}
    */
-  removeQueue(player: GameTypes.PlayerQueue) {
+  removeQueue(player: GameTypes.Participant) {
     GameModuleData.queue = GameModuleData.queue.splice(
       GameModuleData.queue.indexOf(player),
       1
@@ -38,18 +38,33 @@ export class GameModuleData {
   /**
    * What does this do
    * @method  getPairQueue
-   * @returns {GameTypes.PlayerQueue[]}
+   * @returns {GameTypes.Participant[]}
    *
    * @todo Fix current match systems and implement actual MMR checks
    */
-  getPairQueue(): GameTypes.PlayerQueue[] {
+  getPairQueue(): GameTypes.Participant[] {
     if (GameModuleData.queue.length >= 2) {
-      const playerPair: GameTypes.PlayerQueue[] = [];
+      const playerPair: GameTypes.Participant[] = [];
       playerPair.push(GameModuleData.queue.pop());
       playerPair.push(GameModuleData.queue.pop());
       return playerPair;
     } else {
       return null;
     }
+  }
+
+  /**
+   * @param {GameTypes.GameLobby} lobby
+   */
+  addLobby(lobby: GameTypes.GameLobby) {
+    GameModuleData.lobbies.push(lobby);
+  }
+
+  /**
+   * @param {GameTypes.GameLobby} lobby
+   */
+  removeLobby(lobby: GameTypes.GameLobby) {
+    const index = GameModuleData.lobbies.indexOf(lobby);
+    GameModuleData.lobbies.splice(index, 1);
   }
 }

@@ -5,8 +5,9 @@ import { GameConfig, PaddleConfig, BallConfig } from "./config/game.config";
 import { WebSocketServer, WebSocketGateway } from "@nestjs/websockets";
 import { Server } from "socket.io";
 import * as vec2 from "gl-vec2";
-import { GameData, BallData, PaddleData, Vec2 } from "./game.types";
-import { degToRad } from "./game.utils";
+import { GameData, BallData, PaddleData, Vec2, Vec } from "./game.types";
+import { degToRad, intersect } from "./game.utils";
+import { v4 as uuidv4 } from "uuid";
 const logger = new Logger("gameLogic");
 
 @WebSocketGateway({
@@ -58,33 +59,69 @@ export class GameLogic {
 
   //Calculate ball position
   updateBall(gameData: GameData): BallData {
-    //Save previous ball data
     const prev: BallData = gameData.ball;
     const cur: BallData = new BallData();
-
-    //Current ball position is previous ball position + (direction * speed)
     const time_diff: number = (Date.now() - gameData.last_update_time) / 1000;
 
-    [cur.pos.x, cur.pos.y] = vec2.scaleAndAdd(
-      [cur.pos.x, cur.pos.y],
-      [prev.pos.x, prev.pos.y],
-      [prev.direction.x, prev.direction.y],
-      prev.speed * time_diff
-    );
     cur.direction = prev.direction;
-    cur.speed = prev.speed;
+    cur.speed
 
-    //Check for collision with each wall
-    //hacky temporary solve
-    if (cur.pos.x >= GameConfig.playAreaWidth / 2 - 0.1) {
+    const prevPos: Vec = [gameData.ball.pos.x, gameData.ball.pos.y];
+    const direction: Vec = [gameData.ball.direction.x, gameData.ball.pos.y];
+    const curPos: Vec = [0,0];
+    vec2.scaleAndAdd(curPos, prevPos, direction, prev.speed * time_diff);
+    //Check if current position is outside of boundaries
+    if (curPos[0] >= GameConfig.playAreaWidth / 2 - BallConfig.radius) {
+      //Find intersection with right wall
+      const intersectPoint: Vec =  intersect(prevPos, curPos, [GameConfig.playAreaWidth / 2, GameConfig.playAreaHeight / 2], [GameConfig.playAreaWidth / 2, -(GameConfig.playAreaHeight / 2)]);
+      //Get remainder of vector by subtracting intersect from curPos
+      const remainder: Vec = [0,0];
+      vec2.sub(remainder, curPos, intersectPoint);
+      //Find length of remainder, then reflect the direction vector and then apply scaleAndAdd to the intersect point
+      const length: number = vec2.len(remainder);
+      direction[0] = -direction[0];
+      vec2.scaleAndAdd(curPos, intersectPoint, direction, length);
+
       cur.direction.x = -cur.direction.x;
-    } else if (cur.pos.x <= -(GameConfig.playAreaWidth / 2) + 0.1) {
+    } else if (curPos[0] <= -(GameConfig.playAreaWidth / 2) + BallConfig.radius) {
       cur.direction.x = -cur.direction.x;
-    } else if (cur.pos.y >= GameConfig.playAreaHeight / 2 - 0.1) {
+    } else if (curPos[1] >= GameConfig.playAreaHeight / 2 - BallConfig.radius) {
       cur.direction.y = -cur.direction.y;
-    } else if (cur.pos.y <= -(GameConfig.playAreaHeight / 2) + 0.1) {
+    } else if (curPos[1] <= -(GameConfig.playAreaHeight / 2) + BallConfig.radius) {
       cur.direction.y = -cur.direction.y;
     }
+    else{
+      [cur.pos.x, cur.pos.y] = vec2.scaleAndAdd(
+        [cur.pos.x, cur.pos.y],
+        [prev.pos.x, prev.pos.y],
+        [prev.direction.x, prev.direction.y],
+        prev.speed * time_diff
+      );
+
+    }
+
+    //Apply data to ball object
+
+
+
+   
+    cur.direction = prev.direction;
+    cur.speed = prev.speed;
+    
+    //Check intersection between line(prevBall, currBall) and game border/paddle
+    //If there is an intersection, then we need to find the proportion of the vector that is outside the game area or behind the paddle
+    //The final position in this remaining vector added to the intersection point
+    //Check for collision with each wall
+    //hacky temporary solve
+    // if (cur.pos.x >= GameConfig.playAreaWidth / 2 - BallConfig.radius) {
+    //   cur.direction.x = -cur.direction.x;
+    // } else if (cur.pos.x <= -(GameConfig.playAreaWidth / 2) + BallConfig.radius) {
+    //   cur.direction.x = -cur.direction.x;
+    // } else if (cur.pos.y >= GameConfig.playAreaHeight / 2 - BallConfig.radius) {
+    //   cur.direction.y = -cur.direction.y;
+    // } else if (cur.pos.y <= -(GameConfig.playAreaHeight / 2) + BallConfig.radius) {
+    //   cur.direction.y = -cur.direction.y;
+    // }
 
     return cur;
   }
@@ -94,6 +131,7 @@ export class GameLogic {
     const gameData: GameData = new GameData();
 
     //Setup general game properties
+    gameData.match_id = uuidv4();
     gameData.is_new_round = true;
     gameData.bounds.width = GameConfig.playAreaWidth;
     gameData.bounds.height = GameConfig.playAreaHeight;

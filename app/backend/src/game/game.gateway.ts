@@ -14,7 +14,6 @@ import {
   JoinGameQueueDto,
   PlayerReadyDto
 } from "./dto/game.dto";
-import { GameStartEntity } from "./entities/game.entity";
 
 /** Create logger for module */
 const logger = new Logger("gameGateway");
@@ -36,17 +35,25 @@ export class GameGateway {
 
   /**
    * Gateway for a client sent game invite
+   * @method sendGameInvite
+   * @param {Socket} client this is the client socket info
    * @param {JoinGameInviteDto} joinGameInviteDto
    * @returns {}
    * @listens sendGameInvite
    */
   @SubscribeMessage("sendGameInvite")
-  async sendGameInvite(@MessageBody() joinGameInviteDto: JoinGameInviteDto) {
+  async sendGameInvite(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() joinGameInviteDto: JoinGameInviteDto
+  ) {
+    logger.log("Server received sendGameInvite from: " + client.id);
     this.gameService.sendGameInvite();
   }
 
   /**
    * Join matchmaking queue for new game
+   * @method joinGameQueue
+   * @param {Socket} client
    * @param {JoinGameQueueDto} joinGameQueueDto
    * @returns {}
    * @listens joinGameQueue
@@ -56,24 +63,36 @@ export class GameGateway {
     @ConnectedSocket() client: Socket,
     @MessageBody() joinGameQueueDto: JoinGameQueueDto
   ) {
-    logger.log("Socket id: " + client.id);
-    this.gameService.joinGameQueue(client, joinGameQueueDto);
+    logger.log("Server received joinGameQueue from: " + client.id);
+    this.gameService.joinGameQueue(client.id, joinGameQueueDto);
+  }
+
+  /**
+   * Leave matchmaking queue
+   * @method leaveGameQueue
+   * @param {Socket} client
+   * @returns {}
+   * @listens leaveGameQueue
+   */
+  @SubscribeMessage("leaveGameQueue")
+  async leaveGameQueue(@ConnectedSocket() client: Socket) {
+    logger.log("Server received leaveGameQueue from: " + client.id);
   }
 
   /**
    * Handle playerReady event and start game when both players ready
+   * @method playerReady
+   * @param {Socket} client
    * @param {PlayerReadyDto} playerReadyDto
-   * @returns {Promise<GameStartEntity>}
+   * @returns {}
    * @listens playerReady
-   *
-   * @todo This needs to identify which player the ready alert came from
-   * @todo return GameStartEntity
    */
   @SubscribeMessage("playerReady")
   async playerReady(
+    @ConnectedSocket() client: Socket,
     @MessageBody() playerReadyDto: PlayerReadyDto
-  ): Promise<GameStartEntity> {
+  ) {
+    logger.log("Server received playerReady from: " + client.id);
     this.gameService.gameStart();
-    return null;
   }
 }
