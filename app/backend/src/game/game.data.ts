@@ -67,4 +67,31 @@ export class GameModuleData {
     const index = GameModuleData.lobbies.indexOf(lobby);
     GameModuleData.lobbies.splice(index, 1);
   }
+
+  /**
+   * 
+   */
+  getLobby(lobby_id: string): GameTypes.GameLobby {
+    GameModuleData.lobbies.forEach(element => {
+      if (element.lobby_id === lobby_id)
+        return element;
+    });
+    return null;
+  }
+
+  /**
+   *
+   */
+  addGame(game: GameTypes.GameData) {
+    GameModuleData.games.push(game);
+  }
+
+  /**
+   *
+   */
+  removeGame(game: GameTypes.GameData) {
+    const index = GameModuleData.games.indexOf(game);
+    GameModuleData.games.splice(index, 1);
+    //Add the game results to database?
+  }
 }

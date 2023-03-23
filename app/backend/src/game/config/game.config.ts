@@ -1,3 +1,4 @@
+import { Vec2 } from "../vector";
 export class PaddleConfig {
   static readonly height: number = 0.5;
   static readonly width: number = 0.5;
@@ -16,6 +17,22 @@ export class GameConfig {
   static readonly playAreaWidth: number = 6;
   static readonly playAreaHeight: number = 4;
   static readonly serverUpdateRate: number = 17;
+  static readonly topRight: Vec2 = new Vec2(
+    this.playAreaWidth / 2,
+    this.playAreaHeight / 2
+  );
+  static readonly botRight: Vec2 = new Vec2(
+    this.playAreaWidth / 2,
+    -(this.playAreaHeight / 2)
+  );
+  static readonly topLeft: Vec2 = new Vec2(
+    -(this.playAreaWidth / 2),
+    this.playAreaHeight / 2
+  );
+  static readonly botLeft: Vec2 = new Vec2(
+    -(this.playAreaWidth / 2),
+    -(this.playAreaHeight / 2)
+  );
 }
 
 //Colours

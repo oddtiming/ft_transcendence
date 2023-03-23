@@ -1,8 +1,4 @@
-
-
 import { Vec2 } from "./vector";
-
-export type Vec = number[];
 
 export class BallData {
   pos: Vec2 = new Vec2();
@@ -28,8 +24,23 @@ export class GameData {
   ball: BallData = new BallData();
   paddle_left: PaddleData = new PaddleData();
   paddle_right: PaddleData = new PaddleData();
+  player_left: string;
+  player_right: string;
   player_left_ready: boolean;
   player_right_ready: boolean;
+}
+
+/**
+ *
+ */
+export class Participant {
+  client_id: string;
+  socket_id: string; /** This socket_id needs to be kept up to date */
+  user_name: string;
+  is_player: boolean;
+  mmr?: number;
+  diplay_name?: string; /** @todo add in display name at a later time*/
+  queue_join_time?: number;
 }
 
 /**
@@ -41,19 +52,6 @@ export class GameLobby {
   spectators: string[] = [];
   lobby_id: string;
   match_id: string;
-  gamestate: GameData;
+  game: GameData;
   created_at: number;
-}
-
-/**
- *
- */
-export class Participant {
-  client_id: string;
-  socket_id: string;  /** This socket_id needs to be kept up to date */
-  user_name: string;
-  is_player: boolean;
-  mmr?: number;
-  diplay_name?: string; /** @todo add in display name at a later time*/
-  queue_join_time?: number;
 }

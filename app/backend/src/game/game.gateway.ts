@@ -93,6 +93,10 @@ export class GameGateway {
     @MessageBody() playerReadyDto: PlayerReadyDto
   ) {
     logger.log("Server received playerReady from: " + client.id);
-    this.gameService.gameStart();
+    //Need to pass player data and lobby  so we know which game this applies to
+    this.gameService.playerReady(
+      playerReadyDto.lobby_id,
+      playerReadyDto.client_id
+    );
   }
 }

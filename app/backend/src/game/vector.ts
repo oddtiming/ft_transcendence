@@ -5,7 +5,7 @@ export class Vec2 {
   public x: number;
   public y: number;
 
-  constructor(X: number, Y: number) {
+  constructor(X?: number, Y?: number) {
     this.x = X;
     this.y = Y;
   }
@@ -21,7 +21,7 @@ export class Vec2 {
   }
 
   /**
-   * Subract a and b
+   * Subract b from a
    * @param {Vec2} a
    * @param {Vec2} b
    * @returns {Vec2} - resultant vector

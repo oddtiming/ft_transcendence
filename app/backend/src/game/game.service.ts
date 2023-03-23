@@ -8,6 +8,7 @@ import { GameModuleData } from "./game.data";
 import * as GameTypes from "./game.types";
 import * as GameDto from "./dto/game.dto";
 import { v4 as uuidv4 } from "uuid";
+import { GameConfig } from "./config/game.config";
 
 const logger = new Logger("gameService");
 
@@ -92,8 +93,11 @@ export class GameService {
     lobby.lobby_id = uuidv4();
 
     //Create a new websocket room and subscribe players
-    this.server.in(playerPair[0].socket_id).socketsJoin(lobby.lobby_id);
-    this.server.in(playerPair[1].socket_id).socketsJoin(lobby.lobby_id);
+    lobby.participants.forEach((element) => {
+      this.server.in(element.socket_id).socketsJoin(lobby.lobby_id);
+    });
+
+  
 
     //Add new lobby to array
     this.gameModuleData.addLobby(lobby);
@@ -103,17 +107,77 @@ export class GameService {
   }
 
   /**
+   *
+   * @returns
+   */
+  createGame(lobby: GameTypes.GameLobby): GameTypes.GameData {
+    logger.log("createGame() called");
+
+    //Create a new gameobject
+    const game: GameTypes.GameData = this.gameLogic.initNewGame();
+
+    //Create a new game object
+    lobby.game = game;
+    
+    //Assign players to sides
+    let side = "left";
+    lobby.participants.forEach((element) => {
+      if (element.is_player) {
+        if (side === "left") {
+          lobby.game.player_left = element.client_id;
+          side = "right";
+        } else if (side === "right") {
+          lobby.game.player_right = element.client_id;
+          side = "done";
+        }
+      }
+    });
+
+    //Add it to the games array
+    this.gameModuleData.addGame(game);
+    return game;
+  }
+
+  /**
    * Start the game if both players are ready
    * @method gameStart
    * @returns {}
    */
-  async gameStart() {
-    logger.log("gameStart() called");
+  async startGame(lobby: GameTypes.GameLobby) {
+    logger.log("startGame() called");
 
-    if (this.gameState.player_left_ready && this.gameState.player_right_ready)
-      this.startNewGame();
+    try {
+      this.schedulerRegistry.getInterval("gameUpdateInterval" + lobby.lobby_id);
+    } catch {
+      logger.log("Error creating gameUpdateInterval");
+      this.addGameUpdateInterval(
+        lobby,
+        "gameUpdateInterval" + lobby.lobby_id,
+        GameConfig.serverUpdateRate
+      );
+    }
 
     //Emit gameStart event to clients so they can render the game window
+  }
+  //Add new gameUpdateInterval
+  async addGameUpdateInterval(
+    lobby: GameTypes.GameLobby,
+    name: string,
+    milliseconds: number
+  ) {
+    //Set callback function to gamestate
+    const interval = setInterval(
+      this.gameLogic.sendServerUpdate.bind(lobby),
+      milliseconds
+    );
+    this.schedulerRegistry.addInterval(name, interval);
+    logger.log(`Interval ${name} created`);
+  }
+
+  //Delete an interval
+  deleteInterval(name: string) {
+    this.schedulerRegistry.deleteInterval(name);
+    logger.log(`Interval ${name} deleted!`);
   }
 
   /**
@@ -123,24 +187,27 @@ export class GameService {
    * @returns {}
    */
   async deleteLobby(lobby: GameTypes.GameLobby) {
-   lobby.participants.forEach( (value: GameTypes.Participant) => {
-    this.server.in(value.socket_id).socketsLeave(lobby.lobby_id);
-   })
+    lobby.participants.forEach((value: GameTypes.Participant) => {
+      this.server.in(value.socket_id).socketsLeave(lobby.lobby_id);
+    });
   }
 
   /**
-   * Creates a new game instance
-   * @method startNewGame
-   * @returns {}
+   * Accepts playerReady event and starts game if both players are ready
+   * @param {string} lobby_id
+   * @param {string} client_id;
    */
-  async startNewGame() {
-    logger.log("startNewGame() called");
+  playerReady(lobby_id: string, client_id: string) {
+    const lobby: GameTypes.GameLobby = this.gameModuleData.getLobby(lobby_id);
+    if (lobby.game.player_left === client_id) {
+      lobby.game.player_left_ready = true;
+    } else if (lobby.game.player_right === client_id) {
+      lobby.game.player_right_ready = true;
+    }
 
-    try {
-      this.schedulerRegistry.getInterval("gameUpdateInterval");
-    } catch {
-      logger.log("Error creating gameUpdateInterval");
-      this.gameLogic.createGame(this.gameState);
+    //If both players are ready start the game
+    if (lobby.game.player_left_ready && lobby.game.player_right_ready) {
+      this.startGame(lobby);
     }
   }
 }

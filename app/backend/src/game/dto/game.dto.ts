@@ -27,5 +27,5 @@ export class JoinGameQueueDto {
  */
 export class PlayerReadyDto {
   lobby_id: string;
+  client_id: string;
 }
-
