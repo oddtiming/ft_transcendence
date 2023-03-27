@@ -46,7 +46,7 @@ function PaddleLeft() {
 function PaddleRight() {
   const mesh = useRef<THREE.Mesh>(null!);
   return (
-    <mesh>
+    <mesh >
       <boxGeometry
         args={[PaddleConfig.width, PaddleConfig.height, PaddleConfig.depth]}
       />

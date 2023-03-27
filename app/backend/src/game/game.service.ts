@@ -97,8 +97,6 @@ export class GameService {
       this.server.in(element.socket_id).socketsJoin(lobby.lobby_id);
     });
 
-  
-
     //Add new lobby to array
     this.gameModuleData.addLobby(lobby);
 
@@ -118,7 +116,7 @@ export class GameService {
 
     //Create a new game object
     lobby.game = game;
-    
+
     //Assign players to sides
     let side = "left";
     lobby.participants.forEach((element) => {
